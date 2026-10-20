@@ -522,7 +522,7 @@ mod tests {
             ("/memospot/window/theme", json!("dark")),
             ("/memospot/window/reduce_animation", json!(true)),
             ("/memospot/window/locale", json!("es")),
-            ("/memospot/window/hide_menu_bar", json!(true)),
+            ("/memospot/window/hide_menu_bar", json!(false)),
             ("/memospot/window/maximized", json!(true)),
             ("/memos/port", json!(9999)),
             ("/memospot/remote/enabled", json!(true)),
@@ -561,7 +561,7 @@ mod tests {
             snapshot.current.memospot.window.locale.as_deref(),
             Some("es")
         );
-        assert_eq!(snapshot.current.memospot.window.hide_menu_bar, Some(true));
+        assert_eq!(snapshot.current.memospot.window.hide_menu_bar, Some(false));
         assert_eq!(snapshot.current.memospot.window.maximized, Some(true));
         assert_eq!(snapshot.current.memos.port, Some(9999));
         assert_eq!(snapshot.current.memospot.remote.enabled, Some(true));

@@ -42,13 +42,17 @@ fn apply_locale<R: Runtime>(app: &AppHandle<R>, state: &AppState) {
         Ok(Ok(menu_bar)) => {
             if let Err(error) = app.set_menu(menu_bar) {
                 error!("failed to update menu locale: {error}");
-            } else if let Some(version) = state
-                .memos_version
-                .read()
-                .expect("version lock poisoned")
-                .clone()
-            {
-                menu::update_memos_version_entry(app, &version);
+            } else {
+                // Rebuilding the menu re-shows the bar on Windows.
+                menu::apply_visibility(app);
+                if let Some(version) = state
+                    .memos_version
+                    .read()
+                    .expect("version lock poisoned")
+                    .clone()
+                {
+                    menu::update_memos_version_entry(app, &version);
+                }
             }
         }
         Ok(Err(error)) => error!("failed to rebuild menu after locale change: {error}"),
@@ -199,6 +203,10 @@ pub async fn set_config<R: Runtime>(
 
     if update.locale_changed {
         apply_locale(&app, &state);
+    } else {
+        // Menu-bar visibility applies live; every other startup-only window
+        // field keeps reporting that a restart is required.
+        menu::apply_visibility(&app);
     }
 
     Ok(update.result)
@@ -231,13 +239,38 @@ pub fn reset_zoom<R: Runtime>(app: AppHandle<R>) {
 #[command]
 pub fn toggle_menu_bar<R: Runtime>(app: AppHandle<R>) {
     use tauri::Manager;
-    if let Some(main_window) = app.get_webview_window(crate::window::Window::Main.into()) {
-        match main_window.is_menu_visible() {
-            Ok(true) => main_window.hide_menu().ok(),
-            Ok(false) => main_window.show_menu().ok(),
-            Err(_) => None,
-        };
+
+    // macOS keeps its system menu bar, where hiding it would leave no way back.
+    if cfg!(target_os = "macos") {
+        return;
     }
+
+    let Some(main_window) = app.get_webview_window(crate::window::Window::Main.into()) else {
+        return;
+    };
+    let Ok(is_visible) = main_window.is_menu_visible() else {
+        return;
+    };
+
+    let result = if is_visible {
+        main_window.hide_menu()
+    } else {
+        main_window.show_menu()
+    };
+    if let Err(error) = result {
+        debug!("failed to toggle menu bar: {error}");
+        return;
+    }
+
+    // Persist the choice so it survives restarts.
+    let store = app.state::<AppState>().config.clone();
+    tauri::async_runtime::spawn(async move {
+        let _ = store
+            .update_and_persist(|config| {
+                config.memospot.window.hide_menu_bar = Some(is_visible);
+            })
+            .await;
+    });
 }
 
 #[command]

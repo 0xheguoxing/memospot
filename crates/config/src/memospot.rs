@@ -98,7 +98,7 @@ pub struct Window {
     pub x: Option<i32>,
     /// (Managed) The window's initial y position.
     pub y: Option<i32>,
-    /// Hide main menu bar.
+    /// Start with the main menu bar hidden. Toggle it at runtime with `Ctrl+H`.
     pub hide_menu_bar: Option<bool>,
     /// Theme.
     pub theme: Option<String>,
@@ -118,7 +118,7 @@ impl Default for Window {
             height: Some(720),
             x: Some(0),
             y: Some(0),
-            hide_menu_bar: Some(false),
+            hide_menu_bar: Some(true),
             theme: None,
             reduce_animation: Some(false),
             locale: None,

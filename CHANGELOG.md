@@ -22,6 +22,14 @@ Security: in case of vulnerabilities.
 
 ## [Unreleased]
 
+### Changed
+
+- The main menu bar now starts hidden. Press `Ctrl+H` to toggle it.
+- Data now lives in a `data` folder next to the Memospot executable, making the application portable. Existing data in the previous
+  per-user location is no longer picked up; move it into the new folder to keep it.
+- The interface now uses Sarasa Gothic UI Nerd Font (更纱黑体 UI), falling back to Source Han Sans (思源黑体), and then to the system
+  font.
+
 ## [1.0.5] - 2026-10-10
 
 ### Added

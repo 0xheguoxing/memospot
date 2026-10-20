@@ -258,6 +258,10 @@ pub fn run() {
                     include_str!(concat!(env!("OUT_DIR"), "/shortcut_polyfill.js"));
                 webview.eval(POLYFILL).ok();
 
+                // Render the Memos interface with the Memospot UI font.
+                static UI_FONT_POLYFILL: &str = include_str!("polyfills/ui_font.js");
+                webview.eval(UI_FONT_POLYFILL).ok();
+
                 let inject_reduce_animation_polyfill = config_store
                     .snapshot()
                     .current
@@ -289,6 +293,7 @@ pub fn run() {
 
             // The menu must be set at the application level to also work in macOS.
             app.set_menu(menu::build(app_handle)?)?;
+            menu::apply_visibility(app_handle);
 
             // Single owner of the version handoff: poll once, store the
             // version, and update the menu immediately on delivery.

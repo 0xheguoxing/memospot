@@ -44,7 +44,25 @@ bg-primary-darker: 177 74.8% 20.2%;
 */
 @layer base {
     :root {
+        /*
+         * UI font: Sarasa Gothic UI Nerd Font (更纱黑体 UI), with Source Han
+         * Sans (思源黑体) as the CJK fallback. Localized family names are
+         * spelled out too, since Windows registers one variant or the other
+         * depending on the system locale.
+         */
+        --font-sans-sc:
+            "Sarasa UI SC Nerd Font",
+            "更纱黑体 UI SC Nerd Font",
+            "Source Han Sans SC",
+            "思源黑体";
+        --font-sans-tc:
+            "Sarasa UI TC Nerd Font",
+            "更紗黑體 UI TC Nerd Font",
+            "Sarasa UI HC Nerd Font",
+            "更紗黑體 UI HC Nerd Font",
+            "Source Han Sans TC";
         --font-sans-default:
+            var(--font-sans-sc),
             system-ui,
             -apple-system,
             BlinkMacSystemFont,
@@ -98,6 +116,18 @@ bg-primary-darker: 177 74.8% 20.2%;
         --radius: 0.4rem;
 
         font-family: var(--font-sans);
+        /*
+         * Sarasa has no Medium face, so 500 resolves to SemiBold: the smallest
+         * real step above Regular, without synthesized bold (`font-synthesis`
+         * is disabled below).
+         */
+        font-weight: 500;
+        /*
+         * One step below the browser default: Sarasa reads visually larger
+         * than the system UI fonts, so the interface is clearer slightly
+         * smaller. Every rem-based size scales with this.
+         */
+        font-size: 15px;
         font-synthesis: none;
         text-rendering: auto;
         -webkit-text-size-adjust: 100%;
@@ -128,6 +158,7 @@ bg-primary-darker: 177 74.8% 20.2%;
 
     :root:lang(zh), :root:lang(zh-Hans), :root:lang(zh-CN), :root:lang(zh-SG) {
         --font-sans:
+            var(--font-sans-sc),
             "PingFang SC",
             "Hiragino Sans GB",
             "Microsoft YaHei UI",
@@ -141,6 +172,7 @@ bg-primary-darker: 177 74.8% 20.2%;
 
     :root:lang(zh-Hant), :root:lang(zh-TW), :root:lang(zh-HK), :root:lang(zh-MO) {
         --font-sans:
+            var(--font-sans-tc),
             "PingFang TC",
             "Hiragino Sans CNS",
             "Microsoft JhengHei UI",

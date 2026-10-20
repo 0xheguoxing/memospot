@@ -34,7 +34,7 @@ x: number | null,
  */
 y: number | null, 
 /**
- * Hide main menu bar.
+ * Start with the main menu bar hidden. Toggle it at runtime with `Ctrl+H`.
  */
 hide_menu_bar: boolean | null, 
 /**

@@ -2,9 +2,9 @@ use crate::Config;
 
 /// Restart impact of configuration edits.
 ///
-/// Only theme, animation, and locale changes apply live. Every other
-/// difference requires restarting Memospot, so unknown future fields
-/// fail closed toward restart: blank them above only if they genuinely
+/// Only theme, animation, locale, and menu-bar visibility changes apply live.
+/// Every other difference requires restarting Memospot, so unknown future
+/// fields fail closed toward restart: blank them above only if they genuinely
 /// take effect without one.
 impl Config {
     pub fn restart_required(&self, other: &Self) -> bool {
@@ -14,6 +14,7 @@ impl Config {
             config.memospot.window.theme = None;
             config.memospot.window.reduce_animation = None;
             config.memospot.window.locale = None;
+            config.memospot.window.hide_menu_bar = None;
         }
         before != after
     }
@@ -39,6 +40,8 @@ mod tests {
         assert!(!before.restart_required(&after));
         after.memospot.window.reduce_animation = Some(true);
         assert!(!before.restart_required(&after));
+        after.memospot.window.hide_menu_bar = Some(false);
+        assert!(!before.restart_required(&after));
 
         // WHEN server/process settings change THEN a restart is required.
         after.memos.port = Some(9999);
@@ -59,10 +62,6 @@ mod tests {
         // WHEN startup-only window settings change THEN a restart is required.
         after = before.clone();
         after.memospot.window.maximized = Some(true);
-        assert!(before.restart_required(&after));
-        // AND menu-bar visibility.
-        after = before.clone();
-        after.memospot.window.hide_menu_bar = Some(true);
         assert!(before.restart_required(&after));
     }
 }

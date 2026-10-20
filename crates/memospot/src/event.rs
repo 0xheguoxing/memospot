@@ -227,13 +227,7 @@ fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, run_event: RunEvent) -> Res
             main_window.open_devtools();
         }
         MainMenu::ViewToggleMenuBar => {
-            if let Ok(visible) = main_window.is_menu_visible() {
-                if visible {
-                    let _ = main_window.hide_menu();
-                } else {
-                    let _ = main_window.show_menu();
-                }
-            }
+            cmd::toggle_menu_bar(app.clone());
         }
         MainMenu::ViewRefresh => {
             main_window
@@ -247,6 +241,7 @@ fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, run_event: RunEvent) -> Res
         MainMenu::ViewReload => {
             let menu = menu::build(app)?;
             app.set_menu(menu)?;
+            menu::apply_visibility(app);
 
             #[cfg(debug_assertions)]
             let url = app.config().build.dev_url.clone();

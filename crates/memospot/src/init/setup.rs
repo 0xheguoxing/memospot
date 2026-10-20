@@ -19,9 +19,29 @@ use std::path::{Path, PathBuf};
 use tokio::time::Instant;
 use writable::PathExt;
 
+/// Name of the portable data directory created next to the executable.
+const PORTABLE_DATA_DIR: &str = "data";
+
 /// Ensure that data directory exists and is writable.
+///
+/// Resolution order:
+/// 1. `MEMOSPOT_DATA`, when set to a non-empty path.
+/// 2. `data` next to the executable, keeping the application portable.
+/// 3. Platform data directory, used when the executable directory is read-only,
+///    as in system-wide installations.
 pub fn data_path(app_name: &str) -> PathBuf {
-    let data_path = get_app_data_path(app_name);
+    let exe_dir = env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(Path::to_path_buf));
+
+    let data_path = resolve_data_path(
+        env::var("MEMOSPOT_DATA").ok().as_deref(),
+        exe_dir.as_deref(),
+        || get_app_data_path(app_name),
+        PORTABLE_DATA_DIR,
+        |path| fs::create_dir_all(path).is_ok() && path.is_writable(),
+    );
+
     if !data_path.exists() {
         fs::create_dir_all(&data_path).expect_dialog(fl!(
             "panic-failed-to-create-data-directory",
@@ -36,6 +56,31 @@ pub fn data_path(app_name: &str) -> PathBuf {
         ));
     }
     data_path
+}
+
+/// Resolve the data directory from injected inputs.
+///
+/// `is_usable` stands in for creating the portable directory and probing it,
+/// and `legacy` for the platform directory resolution, so tests stay hermetic.
+/// Production callers pass the real filesystem, environment, and executable.
+fn resolve_data_path(
+    env_override: Option<&str>,
+    exe_dir: Option<&Path>,
+    legacy: impl FnOnce() -> PathBuf,
+    portable_dir: &str,
+    is_usable: impl Fn(&Path) -> bool,
+) -> PathBuf {
+    if let Some(dir) = env_override.map(str::trim).filter(|dir| !dir.is_empty()) {
+        return PathBuf::from(dir);
+    }
+
+    if let Some(data_dir) = exe_dir.map(|dir| dir.join(portable_dir))
+        && is_usable(&data_dir)
+    {
+        return data_dir;
+    }
+
+    legacy()
 }
 
 /// Ensure that Memos data directory exists and is writable.
@@ -371,4 +416,75 @@ pub fn find_memos(memos: &Memos, memospot_data: &Path, memospot_cwd: &Path) -> P
     }
 
     panic_dialog!(fl!("panic-unable-to-find-memos-binary"));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn legacy() -> PathBuf {
+        PathBuf::from("/home/alice/.memospot")
+    }
+
+    #[test]
+    fn data_path_prefers_env_override() {
+        // GIVEN an explicit data directory in the environment
+        // WHEN resolving with a usable portable directory
+        let resolved = resolve_data_path(
+            Some("/srv/data"),
+            Some(Path::new("/opt/app")),
+            legacy,
+            "data",
+            |_| true,
+        );
+        // THEN the explicit directory wins
+        assert_eq!(resolved, PathBuf::from("/srv/data"));
+    }
+
+    #[test]
+    fn data_path_ignores_blank_env_override() {
+        // GIVEN a blank environment override
+        // WHEN resolving with a usable portable directory
+        let resolved = resolve_data_path(
+            Some("   "),
+            Some(Path::new("/opt/app")),
+            legacy,
+            "data",
+            |_| true,
+        );
+        // THEN the portable directory is used
+        assert_eq!(resolved, PathBuf::from("/opt/app/data"));
+    }
+
+    #[test]
+    fn data_path_defaults_to_directory_next_to_executable() {
+        // GIVEN an executable directory and no environment override
+        // WHEN the portable directory is usable
+        let resolved =
+            resolve_data_path(None, Some(Path::new("/opt/app")), legacy, "data", |path| {
+                assert_eq!(path, Path::new("/opt/app/data"));
+                true
+            });
+        // THEN the portable directory is returned
+        assert_eq!(resolved, PathBuf::from("/opt/app/data"));
+    }
+
+    #[test]
+    fn data_path_falls_back_when_portable_directory_is_not_usable() {
+        // GIVEN a read-only executable directory
+        // WHEN the portable directory cannot be created
+        let resolved =
+            resolve_data_path(None, Some(Path::new("/opt/app")), legacy, "data", |_| false);
+        // THEN the platform data directory is used
+        assert_eq!(resolved, PathBuf::from("/home/alice/.memospot"));
+    }
+
+    #[test]
+    fn data_path_falls_back_without_executable_path() {
+        // GIVEN an unresolvable executable path
+        // WHEN resolving without an environment override
+        let resolved = resolve_data_path(None, None, legacy, "data", |_| true);
+        // THEN the platform data directory is used
+        assert_eq!(resolved, PathBuf::from("/home/alice/.memospot"));
+    }
 }

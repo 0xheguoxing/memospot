@@ -96,13 +96,45 @@ pub fn build_empty<R: Runtime>(handle: &AppHandle<R>) -> tauri::Result<Menu<R>> 
     Menu::with_items(handle, &[])
 }
 
-/// Build the main menu.
-pub fn build<R: Runtime>(handle: &AppHandle<R>) -> tauri::Result<Menu<R>> {
-    let config = handle.state::<AppState>().config.snapshot();
-    if config.current.memospot.window.hide_menu_bar == Some(true) {
-        return build_empty(handle);
+/// Apply the configured menu-bar visibility to the main window.
+///
+/// Must run after every menu (re)build: setting a menu makes the bar visible
+/// again on Windows. macOS keeps its system menu bar, where hiding would leave
+/// no way back to the menu, so the setting is ignored there.
+pub fn apply_visibility<R: Runtime>(handle: &AppHandle<R>) {
+    if cfg!(target_os = "macos") {
+        return;
     }
 
+    let is_hidden = handle
+        .state::<AppState>()
+        .config
+        .snapshot()
+        .current
+        .memospot
+        .window
+        .hide_menu_bar
+        .unwrap_or(false);
+
+    let Some(main_window) = handle.get_webview_window(Window::Main.into()) else {
+        return;
+    };
+
+    let result = if is_hidden {
+        main_window.hide_menu()
+    } else {
+        main_window.show_menu()
+    };
+    if let Err(error) = result {
+        debug!("failed to apply menu bar visibility: {error}");
+    }
+}
+
+/// Build the main menu.
+///
+/// The menu is always fully built, even when it starts hidden: hiding only
+/// changes visibility, so the `Ctrl+H` shortcut can bring it back.
+pub fn build<R: Runtime>(handle: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     let settings =
         MenuItemBuilder::with_id(MainMenu::AppSettings.id(), MainMenu::AppSettings.text())
             .accelerator(accelerator::OPEN_SETTINGS)

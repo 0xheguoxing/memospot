@@ -62,7 +62,11 @@ fn resolve_app_data_path(
     fallback
 }
 
-/// Get the data path to supplied application name.
+/// Get the platform data path to supplied application name.
+///
+/// Platform fallback for [`crate::init::data_path`], which prefers a portable
+/// `data` directory next to the executable and only calls in here when that
+/// directory is unavailable (for example, read-only system installations).
 ///
 /// Probe paths:
 ///   - ~/.config/{app_name}

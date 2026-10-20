@@ -2,6 +2,7 @@
 .dprint
 build/
 server-dist/
+data/
 .env
 .secret
 crates/memospot/gen/schemas/
